@@ -4,20 +4,20 @@ defmodule Namy.Server do
   and holds a set of registered hosts and sub-domain servers.
   Servers form a tree structure.
   """
-  alias Namy.Entry
+  alias Namy.{Entry, Logger}
 
   def start do
-    pid = spawn(__MODULE__, :init, [])
+    pid = spawn_link(__MODULE__, :init, [])
     Process.register(pid, __MODULE__)
   end
 
   def start(domain, dns) do
-    pid = spawn(__MODULE__, :init, [domain, dns])
+    pid = spawn_link(__MODULE__, :init, [domain, dns])
     Process.register(pid, __MODULE__)
   end
 
   def stop do
-    send(self(), :stop)
+    send(__MODULE__, :stop)
     Process.unregister(__MODULE__)
   end
 
@@ -33,36 +33,38 @@ defmodule Namy.Server do
   defp server(entries, ttl) do
     receive do
       {:request, from, name} ->
-        IO.inspect("Received request #{name}")
+        Logger.log("Received request #{inspect(name)}")
         reply = Entry.lookup(name, entries)
         send(from, {reply, ttl})
-        IO.inspect("Sent reply: #{reply}")
+        Logger.log("Sent reply: #{inspect(reply)}")
         server(entries, ttl)
 
       {:register, name, entry} ->
         updated_entries = Entry.add(name, entry, entries)
-        IO.inspect("Updated entries: #{updated_entries}")
+        Logger.log("Updated entries: #{inspect(updated_entries)}")
         server(updated_entries, ttl)
 
       {:deregister, name} ->
         updated_entries = Entry.remove(name, entries)
-        IO.inspect("Updated entries: #{updated_entries}")
+        Logger.log("Updated entries: #{inspect(updated_entries)}")
         server(updated_entries, ttl)
 
-      {:ttl, sec} ->
-        server(entries, sec)
+      {:ttl, ttl} ->
+        server(entries, ttl)
 
-      :status ->
-        IO.inspect("Cache #{entries}")
+      {:status, from} ->
+        Logger.log("Cache #{entries}")
+        send(from, {entries, ttl})
         server(entries, ttl)
 
       :stop ->
-        IO.inspect("Closing down")
+        Logger.log("Closing down")
+        Process.exit(self(), :kill)
         :ok
 
-      error ->
-        IO.inspect("Received unrecognized message: #{error}")
-        server(entries, ttl)
+        # error ->
+        #   Logger.info("Received unrecognized message: #{inspect(error)}")
+        #   server(entries, ttl)
     end
   end
 end

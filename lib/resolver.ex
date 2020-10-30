@@ -2,7 +2,7 @@ defmodule Namy.Resolver do
   @moduledoc """
   Resolvers are responsible for helping client find addresses to hosts.
   """
-  alias Namy.{Cache, Time}
+  alias Namy.{Cache, Time, Logger}
 
   def start(root) do
     pid = spawn(__MODULE__, :init, [root])
@@ -24,55 +24,55 @@ defmodule Namy.Resolver do
   defp resolver(cache) do
     receive do
       {:request, from, request} ->
-        IO.inspect("#{__MODULE__} #{self()} received request #{request} from #{from}}")
+        Logger.log("received request #{inspect(request)} from #{inspect(from)}}")
         {reply, updated_cache} = resolve(request, cache)
         send(from, {:reply, reply})
         resolver(updated_cache)
 
       :status ->
-        IO.inspect("Cache #{cache}")
+        Logger.log("Cache #{inspect(cache)}")
         resolver(cache)
 
       :stop ->
-        IO.inspect("Closing down #{__MODULE__} #{self()}")
+        Logger.log("Closing down #{inspect(__MODULE__)} #{inspect(self())}")
         :ok
 
       error ->
-        IO.inspect("#{__MODULE__} #{self()} received unrecognized message: #{error}")
+        Logger.log("received unrecognized message: #{inspect(error)}")
         resolver(cache)
     end
   end
 
   def resolve(name, cache) do
-    IO.inspect("#{__MODULE__} #{self()} resolving #{name}")
+    Logger.log("resolving #{inspect(name)}")
 
     case Cache.lookup(name, cache) do
       :unknown ->
-        IO.inspect("Unknown")
+        Logger.log("Unknown")
         recursive(name, cache)
 
       :invalid ->
-        IO.inspect("Invalid")
+        Logger.log("Invalid")
         updated_cache = Cache.remove(name, cache)
         recursive(name, updated_cache)
 
       {:ok, reply} ->
-        IO.inspect("#{__MODULE__} #{self()} found #{reply}")
+        Logger.log("found #{inspect(reply)}")
         {reply, cache}
     end
   end
 
   def recursive([name | domain], cache) do
-    IO.inspect("Recursive #{domain}")
+    Logger.log("Recursive #{inspect(domain)}")
 
     case resolve(domain, cache) do
       {:unknown, updated_cache} ->
-        IO.inspect("Unknown")
+        Logger.log("Unknown")
         {:unknown, updated_cache}
 
       {{:dns, server}, updated_cache} ->
         send(server, {:request, self(), name})
-        IO.inspect("Sent #{name} to #{server}")
+        Logger.log("Sent #{inspect(name)} to #{inspect(server)}")
 
         receive do
           {:reply, reply, ttl} ->
