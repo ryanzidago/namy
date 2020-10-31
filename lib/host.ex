@@ -1,8 +1,14 @@
 defmodule Namy.Host do
   alias Namy.Logger
 
+  @moduledoc """
+  Namy.Host.start(:www, :www, {:server, :"kth@123.456.789"})
+
+  # => send({:server, :"kth@123.456.789"}, {:register, :www, {:host, self()}})
+  """
+
   def start(name, domain, dns) do
-    pid = spawn(__MODULE__, :init, [domain, dns])
+    pid = spawn_link(__MODULE__, :init, [domain, dns])
     Process.register(pid, name)
   end
 
@@ -19,16 +25,17 @@ defmodule Namy.Host do
   defp host do
     receive do
       {:ping, from} ->
-        Logger.log("received ping from #{from}")
+        Logger.log("received ping from #{inspect(from)}")
         send(from, :pong)
         host()
 
       :stop ->
         Logger.log("closing down")
+        Process.exit(self(), :kill)
         :ok
 
       error ->
-        Logger.log("received strange message: #{error}")
+        Logger.log("received strange message: #{inspect(error)}")
         host()
     end
   end

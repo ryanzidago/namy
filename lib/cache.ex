@@ -3,6 +3,7 @@ defmodule Namy.Cache do
   end
 
   def new do
+    []
   end
 
   def add(_, ttl, {:dns, name}, cache) do

@@ -1,6 +1,7 @@
 defmodule Namy.ServerTest do
   use ExUnit.Case
   alias Namy.Server
+  import Namy.TestHelpers
 
   describe "start/0" do
     test "spawns and registers a process under the name Namy.Server" do
@@ -98,23 +99,6 @@ defmodule Namy.ServerTest do
       send(server_pid, :stop)
 
       refute Process.alive?(server_pid)
-    end
-  end
-
-  defp received do
-    receive do
-      message -> message
-    after
-      500 -> nil
-    end
-  end
-
-  defp received(expected) do
-    receive do
-      message when message == expected -> message
-      message -> message
-    after
-      500 -> nil
     end
   end
 end

@@ -5,7 +5,7 @@ defmodule Namy.Resolver do
   alias Namy.{Cache, Time, Logger}
 
   def start(root) do
-    pid = spawn(__MODULE__, :init, [root])
+    pid = spawn_link(__MODULE__, :init, [root])
     Process.register(pid, __MODULE__)
   end
 
@@ -29,8 +29,9 @@ defmodule Namy.Resolver do
         send(from, {:reply, reply})
         resolver(updated_cache)
 
-      :status ->
+      {:status, from} ->
         Logger.log("Cache #{inspect(cache)}")
+        send(from, cache)
         resolver(cache)
 
       :stop ->
@@ -62,7 +63,7 @@ defmodule Namy.Resolver do
     end
   end
 
-  def recursive([name | domain], cache) do
+  defp recursive([name | domain], cache) do
     Logger.log("Recursive #{inspect(domain)}")
 
     case resolve(domain, cache) do
