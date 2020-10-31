@@ -62,9 +62,9 @@ defmodule Namy.Server do
         Process.exit(self(), :kill)
         :ok
 
-        # error ->
-        #   Logger.info("Received unrecognized message: #{inspect(error)}")
-        #   server(entries, ttl)
+      error ->
+        Logger.log("Received unrecognized message: #{inspect(error)}")
+        server(entries, ttl)
     end
   end
 end
