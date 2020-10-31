@@ -53,7 +53,7 @@ defmodule Namy.Server do
         server(entries, ttl)
 
       {:status, from} ->
-        Logger.log("Cache #{entries}")
+        Logger.log("Cache #{inspect(entries)}")
         send(from, {entries, ttl})
         server(entries, ttl)
 
